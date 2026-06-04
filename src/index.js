@@ -38,6 +38,7 @@ import {
   deleteGuildConfig,
   findChannelConfig,
   getGuildChannels,
+  getStorePath,
   loadStore,
   migrateGuildConfig,
   upsertChannelConfig
@@ -52,6 +53,7 @@ const client = new Client({
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag} (${instanceLabel})`);
+  console.log(`Using config store: ${getStorePath()}`);
   startRichPresence(readyClient, config.presence).catch((error) => {
     console.error('Presence setup failed:', error);
   });
@@ -157,7 +159,7 @@ async function configureChannel(interaction, { channel, repoInput, branch, frequ
   });
 
   await interaction.editReply({
-    embeds: [buildChannelSettingsEmbed(channelConfig)]
+    embeds: [buildChannelSettingsEmbed(channelConfig, { instanceLabel })]
   });
 }
 
@@ -189,7 +191,7 @@ async function handleChannelSettings(interaction) {
     return;
   }
 
-  await interaction.reply({ embeds: [buildChannelSettingsEmbed(channelConfig)] });
+  await interaction.reply({ embeds: [buildChannelSettingsEmbed(channelConfig, { instanceLabel })] });
 }
 
 async function handleStatus(interaction) {

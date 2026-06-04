@@ -3,7 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const DATA_DIR = path.join(ROOT_DIR, 'data');
+const DATA_DIR = path.resolve(
+  process.env.BOT_DATA_DIR ||
+  process.env.RAILWAY_VOLUME_MOUNT_PATH ||
+  (process.env.RAILWAY_PROJECT_ID ? '/data' : path.join(ROOT_DIR, 'data'))
+);
 const STORE_PATH = path.join(DATA_DIR, 'guild-configs.json');
 let storeWriteQueue = Promise.resolve();
 

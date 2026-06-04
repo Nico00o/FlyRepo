@@ -171,7 +171,11 @@ export function buildChannelListEmbed(guildConfig, options = {}) {
   return buildStatusEmbed(guildConfig, options).setTitle('Canales monitoreados');
 }
 
-export function buildChannelSettingsEmbed(channelConfig) {
+export function buildChannelSettingsEmbed(channelConfig, options = {}) {
+  const footer = options.instanceLabel
+    ? `Guardado para este canal. Instancia ${options.instanceLabel}.`
+    : 'Guardado para este canal.';
+
   return new EmbedBuilder()
     .setColor(githubDark)
     .setTitle('Configuracion del canal')
@@ -182,7 +186,8 @@ export function buildChannelSettingsEmbed(channelConfig) {
       { name: 'Frecuencia', value: `${channelConfig.frequencySeconds || 60}s`, inline: true },
       { name: 'Filtros', value: formatFilters(channelConfig.filters), inline: true },
       { name: 'Ultimo commit', value: channelConfig.lastSha ? `\`${channelConfig.lastSha.slice(0, 7)}\`` : 'Pendiente', inline: true }
-    );
+    )
+    .setFooter({ text: footer });
 }
 
 function formatFilters(filters = {}) {
