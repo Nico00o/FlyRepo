@@ -1,10 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DATA_DIR = path.resolve('data');
+const ROOT_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const DATA_DIR = path.join(ROOT_DIR, 'data');
 const STORE_PATH = path.join(DATA_DIR, 'guild-configs.json');
+let storeWriteQueue = Promise.resolve();
 
-export async function loadStore() {
+async function readStore() {
   try {
     const raw = await readFile(STORE_PATH, 'utf8');
     return migrateStore(JSON.parse(raw));
@@ -17,9 +20,36 @@ export async function loadStore() {
   }
 }
 
-export async function saveStore(store) {
+async function writeStore(store) {
   await mkdir(DATA_DIR, { recursive: true });
   await writeFile(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, 'utf8');
+}
+
+export async function loadStore() {
+  await storeWriteQueue;
+  return readStore();
+}
+
+export async function saveStore(store) {
+  return queueStoreMutation(async () => {
+    await writeStore(migrateStore(store));
+    return store;
+  });
+}
+
+async function updateStore(mutator) {
+  return queueStoreMutation(async () => {
+    const store = await readStore();
+    const result = await mutator(store);
+    await writeStore(store);
+    return result;
+  });
+}
+
+function queueStoreMutation(action) {
+  const next = storeWriteQueue.then(action, action);
+  storeWriteQueue = next.catch(() => {});
+  return next;
 }
 
 export function migrateGuildConfig(config = {}) {
@@ -61,69 +91,69 @@ export function getGuildChannels(guildConfig) {
 }
 
 export async function upsertGuildConfig(guildId, config) {
-  const store = await loadStore();
-  store[guildId] = {
-    ...store[guildId],
-    ...config,
-    updatedAt: new Date().toISOString()
-  };
-  await saveStore(store);
-  return store[guildId];
+  return updateStore((store) => {
+    store[guildId] = {
+      ...store[guildId],
+      ...config,
+      updatedAt: new Date().toISOString()
+    };
+    return store[guildId];
+  });
 }
 
 export async function upsertChannelConfig(guildId, channelId, config) {
-  const store = await loadStore();
-  const guildConfig = migrateGuildConfig(store[guildId]);
-  const existingChannels = guildConfig.channels || {};
+  return updateStore((store) => {
+    const guildConfig = migrateGuildConfig(store[guildId]);
+    const existingChannels = guildConfig.channels || {};
 
-  if (!existingChannels[channelId] && Object.keys(existingChannels).length >= 3) {
-    throw new Error('Este servidor ya tiene 3 canales configurados. Elimina uno con `/channel remove`.');
-  }
-
-  guildConfig.channels = {
-    ...existingChannels,
-    [channelId]: {
-      ...existingChannels[channelId],
-      ...config,
-      channelId,
-      updatedAt: new Date().toISOString()
+    if (!existingChannels[channelId] && Object.keys(existingChannels).length >= 3) {
+      throw new Error('Este servidor ya tiene 3 canales configurados. Elimina uno con `/channel remove`.');
     }
-  };
-  guildConfig.updatedAt = new Date().toISOString();
-  store[guildId] = guildConfig;
-  await saveStore(store);
-  return guildConfig.channels[channelId];
+
+    guildConfig.channels = {
+      ...existingChannels,
+      [channelId]: {
+        ...existingChannels[channelId],
+        ...config,
+        channelId,
+        updatedAt: new Date().toISOString()
+      }
+    };
+    guildConfig.updatedAt = new Date().toISOString();
+    store[guildId] = guildConfig;
+    return guildConfig.channels[channelId];
+  });
 }
 
 export async function updateChannelLastSha(guildId, channelId, lastSha) {
-  const store = await loadStore();
-  const guildConfig = migrateGuildConfig(store[guildId]);
+  return updateStore((store) => {
+    const guildConfig = migrateGuildConfig(store[guildId]);
 
-  if (!guildConfig.channels?.[channelId]) {
-    return null;
-  }
+    if (!guildConfig.channels?.[channelId]) {
+      return null;
+    }
 
-  guildConfig.channels[channelId].lastSha = lastSha;
-  guildConfig.channels[channelId].lastCheckAt = new Date().toISOString();
-  guildConfig.updatedAt = new Date().toISOString();
-  store[guildId] = guildConfig;
-  await saveStore(store);
-  return guildConfig.channels[channelId];
+    guildConfig.channels[channelId].lastSha = lastSha;
+    guildConfig.channels[channelId].lastCheckAt = new Date().toISOString();
+    guildConfig.updatedAt = new Date().toISOString();
+    store[guildId] = guildConfig;
+    return guildConfig.channels[channelId];
+  });
 }
 
 export async function deleteChannelConfig(guildId, channelId) {
-  const store = await loadStore();
-  const guildConfig = migrateGuildConfig(store[guildId]);
-  const existed = Boolean(guildConfig.channels?.[channelId]);
+  return updateStore((store) => {
+    const guildConfig = migrateGuildConfig(store[guildId]);
+    const existed = Boolean(guildConfig.channels?.[channelId]);
 
-  if (guildConfig.channels) {
-    delete guildConfig.channels[channelId];
-  }
+    if (guildConfig.channels) {
+      delete guildConfig.channels[channelId];
+    }
 
-  guildConfig.updatedAt = new Date().toISOString();
-  store[guildId] = guildConfig;
-  await saveStore(store);
-  return existed;
+    guildConfig.updatedAt = new Date().toISOString();
+    store[guildId] = guildConfig;
+    return existed;
+  });
 }
 
 export function findChannelConfig(guildConfig, channelId) {
@@ -131,9 +161,9 @@ export function findChannelConfig(guildConfig, channelId) {
 }
 
 export async function deleteGuildConfig(guildId) {
-  const store = await loadStore();
-  const existed = Boolean(store[guildId]);
-  delete store[guildId];
-  await saveStore(store);
-  return existed;
+  return updateStore((store) => {
+    const existed = Boolean(store[guildId]);
+    delete store[guildId];
+    return existed;
+  });
 }
