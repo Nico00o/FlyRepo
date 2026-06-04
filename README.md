@@ -19,6 +19,17 @@ npm.cmd install
    - `DISCORD_TOKEN`: token nuevo del bot.
    - `DISCORD_CLIENT_ID`: Application ID / Client ID del bot en Discord Developer Portal.
    - `GITHUB_TOKEN`: opcional.
+   - `BOT_STATUS`, `BOT_PRESENCE_TEXT`: opcionales para el perfil/rich presence del bot.
+
+## Perfil y rich presence
+
+Al iniciar, el bot muestra una presencia de Discord estilo GitHub y la va rotando automaticamente:
+
+- Playing: texto configurable, por defecto `GitHub Monitor`.
+- Watching: cantidad de repositorios monitoreados.
+- Listening: cantidad de canales donde publica commits.
+
+Para que el perfil se vea mejor en Discord Developer Portal, tambien podes configurar nombre, avatar y descripcion de la aplicacion desde la seccion del bot. La presencia se maneja desde el codigo y las variables `.env`.
 
 ## Registrar comandos
 

@@ -32,6 +32,7 @@ import {
   searchRepositories
 } from './github.js';
 import { checkGuild, startGitHubMonitor } from './monitor.js';
+import { startRichPresence } from './presence.js';
 import {
   deleteChannelConfig,
   deleteGuildConfig,
@@ -50,6 +51,9 @@ const client = new Client({
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
+  startRichPresence(readyClient, config.presence).catch((error) => {
+    console.error('Presence setup failed:', error);
+  });
   startGitHubMonitor(client, config);
 });
 
