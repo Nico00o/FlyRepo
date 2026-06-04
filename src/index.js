@@ -42,6 +42,7 @@ import {
   migrateGuildConfig,
   upsertChannelConfig
 } from './storage.js';
+import { instanceLabel } from './runtime.js';
 
 const config = getConfig();
 
@@ -50,7 +51,7 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`Logged in as ${readyClient.user.tag}`);
+  console.log(`Logged in as ${readyClient.user.tag} (${instanceLabel})`);
   startRichPresence(readyClient, config.presence).catch((error) => {
     console.error('Presence setup failed:', error);
   });
@@ -175,7 +176,7 @@ async function handleChannelRemove(interaction) {
 async function handleChannelList(interaction) {
   const store = await loadStore();
   const guildConfig = migrateGuildConfig(store[interaction.guildId]);
-  await interaction.reply({ embeds: [buildChannelListEmbed(guildConfig)] });
+  await interaction.reply({ embeds: [buildChannelListEmbed(guildConfig, { instanceLabel })] });
 }
 
 async function handleChannelSettings(interaction) {
@@ -193,7 +194,7 @@ async function handleChannelSettings(interaction) {
 
 async function handleStatus(interaction) {
   const guildConfig = await getCurrentGuildConfig(interaction.guildId);
-  await interaction.reply({ embeds: [buildStatusEmbed(guildConfig)] });
+  await interaction.reply({ embeds: [buildStatusEmbed(guildConfig, { instanceLabel })] });
 }
 
 async function handleCheck(interaction) {

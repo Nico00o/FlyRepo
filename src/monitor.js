@@ -18,7 +18,9 @@ export function startGitHubMonitor(client, config) {
 
       for (const [guildId, guildConfig] of Object.entries(store)) {
         for (const channelConfig of getGuildChannels(guildConfig)) {
-          await checkChannel(client, config, guildId, channelConfig);
+          await checkChannel(client, config, guildId, channelConfig).catch((error) => {
+            console.error(`Monitor channel failed (${guildId}/${channelConfig.channelId}/${channelConfig.repo}):`, error);
+          });
         }
       }
     } catch (error) {
@@ -37,7 +39,11 @@ export async function checkGuild(client, appConfig, guildId, guildConfig, option
   let reason = null;
 
   for (const channelConfig of getGuildChannels(guildConfig)) {
-    const result = await checkChannel(client, appConfig, guildId, channelConfig, options);
+    const result = await checkChannel(client, appConfig, guildId, channelConfig, options).catch((error) => ({
+      sent: 0,
+      latestSha: channelConfig.lastSha,
+      reason: `Fallo ${channelConfig.repo}: ${error.message}`
+    }));
     sent += result.sent;
     reason = reason || result.reason;
   }

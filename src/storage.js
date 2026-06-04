@@ -7,6 +7,10 @@ const DATA_DIR = path.join(ROOT_DIR, 'data');
 const STORE_PATH = path.join(DATA_DIR, 'guild-configs.json');
 let storeWriteQueue = Promise.resolve();
 
+export function getStorePath() {
+  return STORE_PATH;
+}
+
 async function readStore() {
   try {
     const raw = await readFile(STORE_PATH, 'utf8');

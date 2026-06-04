@@ -145,11 +145,14 @@ export function buildFilesEmbed({ commit, repo }) {
     .setFooter({ text: files.length > 12 ? `Mostrando 12 de ${files.length} archivos` : 'GitHub Monitor - archivos' });
 }
 
-export function buildStatusEmbed(guildConfig) {
+export function buildStatusEmbed(guildConfig, options = {}) {
   const channels = Object.values(guildConfig.channels || {});
   const description = channels.length
     ? channels.map((item) => `**<#${item.channelId}>**\n\`${item.repo}\` - \`${item.branch}\` - cada ${item.frequencySeconds || 60}s`).join('\n\n')
     : 'No hay canales configurados.';
+  const footer = options.instanceLabel
+    ? `Cada canal tiene repo, frecuencia y filtros propios. Instancia ${options.instanceLabel}.`
+    : 'Cada canal tiene repo, frecuencia y filtros propios.';
 
   const embed = new EmbedBuilder()
     .setColor(githubDark)
@@ -159,13 +162,13 @@ export function buildStatusEmbed(guildConfig) {
       { name: 'Canales activos', value: `${channels.length}/3`, inline: true },
       { name: 'Estado', value: 'Activo', inline: true }
     )
-    .setFooter({ text: 'Cada canal tiene repo, frecuencia y filtros propios.' });
+    .setFooter({ text: footer });
 
   return embed;
 }
 
-export function buildChannelListEmbed(guildConfig) {
-  return buildStatusEmbed(guildConfig).setTitle('Canales monitoreados');
+export function buildChannelListEmbed(guildConfig, options = {}) {
+  return buildStatusEmbed(guildConfig, options).setTitle('Canales monitoreados');
 }
 
 export function buildChannelSettingsEmbed(channelConfig) {
